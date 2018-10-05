@@ -1,0 +1,38 @@
+version: '3'
+services:
+
+  ## Config Servers
+  config01:
+    image: mongo:3.6
+    container_name: config01
+    # https://github.com/mmagr/dojot-ppc64le/commit/f1cc02a66290a87c48bc2b360edeeca1cab403ca
+    user: "mongodb"
+    command: mongod --port 27010 --configsvr --replSet configserver --noprealloc --smallfiles --oplogSize 16 
+    ports:
+      - 27010:27010
+    volumes:
+      - ./data/configdb:/data/configdb:z
+      
+  ## Shards
+  shard01a:
+    image: mongo:3.6
+    container_name: shard01a
+    hostname: shard01a
+    user: "mongodb"
+    command: mongod --port 27017 --shardsvr --replSet shard01 --dbpath /data/mongodb
+    volumes:
+      - ./data/mongodb:/data/mongodb:z
+    ports:
+      - 27017:27017
+
+  ## Router
+  router:
+    image: mongo:3.6
+    container_name: router
+    user: "mongodb"
+    command: mongos --bind_ip_all --port 27011 --configdb configserver/config01:27010  
+    ports:
+      - 27011:27011
+    depends_on:
+      - config01
+      - shard01a
